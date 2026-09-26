@@ -1,0 +1,34 @@
+drug_a,drug_b,severity,description,source_note
+Warfarin,Aspirin,severe,Increased bleeding risk when anticoagulants combine with antiplatelet agents.,Well-established interaction; widely documented in clinical pharmacology references.
+Warfarin,Ibuprofen,severe,NSAIDs increase bleeding risk when combined with anticoagulants.,Well-established interaction.
+Warfarin,Paracetamol,mild,High-dose or prolonged paracetamol use may enhance the anticoagulant effect of warfarin.,Documented at high/prolonged doses; not significant for occasional single-dose use.
+Metformin,Alcohol,moderate,Increased risk of lactic acidosis when combined with excessive alcohol intake.,Standard drug label warning for metformin.
+Amoxicillin,Methotrexate,severe,Amoxicillin can reduce methotrexate clearance, increasing toxicity risk.,Documented pharmacokinetic interaction.
+Ciprofloxacin,Theophylline,moderate,Ciprofloxacin can raise theophylline levels, increasing toxicity risk.,CYP1A2 inhibition interaction, well documented.
+Simvastatin,Clarithromycin,severe,Clarithromycin significantly raises simvastatin levels, increasing risk of rhabdomyolysis.,Strong CYP3A4 interaction; commonly flagged by pharmacists.
+Digoxin,Furosemide,moderate,Furosemide-induced potassium loss can increase digoxin toxicity risk.,Standard cardiology interaction caution.
+Lisinopril,Ibuprofen,moderate,NSAIDs can reduce the blood-pressure-lowering effect of ACE inhibitors and affect kidney function.,Well-documented "triple whammy" risk when combined with diuretics too.
+Sertraline,Tramadol,severe,Combined use increases risk of serotonin syndrome.,Documented serotonergic interaction.
+Aspirin,Ibuprofen,mild,Ibuprofen may reduce the cardioprotective antiplatelet effect of low-dose aspirin if timing is not spaced out.,Documented pharmacodynamic interaction; timing-dependent.
+Metformin,Furosemide,mild,Diuretics can affect blood glucose control and renal clearance of metformin.,Standard caution in diabetes management guidelines.
+Omeprazole,Clopidogrel,moderate,Omeprazole may reduce the antiplatelet effectiveness of clopidogrel via CYP2C19 inhibition.,Well-documented PPI-clopidogrel interaction.
+Amlodipine,Simvastatin,moderate,Amlodipine can increase simvastatin levels, raising myopathy risk at higher simvastatin doses.,Dose-dependent interaction; commonly flagged.
+Losartan,Ibuprofen,moderate,NSAIDs can reduce antihypertensive effect and affect kidney function when combined with ARBs.,Same mechanism class as ACE inhibitor + NSAID caution.
+Levothyroxine,Calcium Carbonate,moderate,Calcium can reduce absorption of levothyroxine if taken together; requires dose spacing.,Well-documented absorption interaction.
+Ciprofloxacin,Calcium Carbonate,moderate,Calcium reduces absorption of ciprofloxacin; requires dose spacing.,Chelation interaction, well documented.
+Azithromycin,Antacid,mild,Antacids may reduce peak absorption of azithromycin; spacing recommended.,Manufacturer labeling caution.
+Diazepam,Alcohol,severe,Combined use significantly increases CNS depression, sedation, and respiratory depression risk.,Well-established, high-risk combination.
+Insulin,Alcohol,moderate,Alcohol can cause unpredictable blood glucose swings and mask hypoglycemia symptoms.,Standard diabetes management caution.
+Prednisolone,Ibuprofen,moderate,Combined corticosteroid and NSAID use increases risk of GI ulceration and bleeding.,Well-documented GI risk interaction.
+Methotrexate,Ibuprofen,severe,NSAIDs can reduce methotrexate clearance and increase toxicity, especially at high methotrexate doses.,Documented, dose-dependent risk.
+Spironolactone,Lisinopril,moderate,Combined use increases risk of hyperkalemia (high potassium).,Well-documented combination risk in renal/cardiac patients.
+Metronidazole,Alcohol,severe,Can cause a disulfiram-like reaction (nausea, flushing, palpitations).,Well-established interaction; standard patient counseling point.
+Fluoxetine,Tramadol,severe,Increases risk of serotonin syndrome.,Same mechanism class as Sertraline-Tramadol.
+Clopidogrel,Aspirin,moderate,Combined antiplatelet use increases bleeding risk; sometimes clinically intended under supervision.,Common intentional dual-therapy combination requiring medical supervision.
+Enalapril,Spironolactone,moderate,Increases risk of hyperkalemia.,Same class interaction as Lisinopril-Spironolactone.
+Domperidone,Ketoconazole,severe,Increases risk of cardiac arrhythmia (QT prolongation).,Documented QT-prolongation interaction; regulatory caution issued in multiple markets.
+Citalopram,Omeprazole,mild,Omeprazole may modestly increase citalopram levels via CYP2C19 inhibition.,Documented but generally mild-severity interaction.
+Warfarin,Metronidazole,severe,Metronidazole can significantly increase the anticoagulant effect of warfarin.,Well-documented, clinically significant interaction.
+Digoxin,Amiodarone,severe,Amiodarone significantly increases digoxin levels, raising toxicity risk.,Well-established cardiology interaction; dose adjustment usually required.
+Warfarin,Amiodarone,severe,Amiodarone increases warfarin's anticoagulant effect, raising bleeding risk.,Well-documented; dose reduction typically needed.
+Losartan,Spironolactone,moderate,Increases risk of hyperkalemia.,Same class interaction pattern as other ARB/ACE + potassium-sparing diuretic combos.
