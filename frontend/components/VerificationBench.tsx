@@ -1,55 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { Link2, Search, Upload } from "lucide-react";
-import { Results, type ResultEntry } from "@/components/Results";
+import { Link2, Search, Loader2 } from "lucide-react";
+import { Results } from "@/components/Results";
+import { verifyDrugs, type VerifyResponse } from "@/lib/api";
 
-const SAMPLE_STRIP = "Paracetamol 500\nAmoxicillin 250\nZyntrexil";
-
-const SAMPLE_RESULTS: ResultEntry[] = [
-  {
-    initial: "P",
-    name: "Paracetamol",
-    meta: "500 mg · Film-coated tablet",
-    salt: "Acetaminophen",
-    confidence: "high",
-    score: "98.4%",
-    batchRef: "PCM-4471-B",
-  },
-  {
-    initial: "A",
-    name: "Amoxicillin",
-    meta: "250 mg · Capsule",
-    salt: "Amoxicillin trihydrate",
-    confidence: "medium",
-    score: "81.2%",
-    note: "Strength inferred from packaging text — confirm against the printed strip.",
-    batchRef: "AMX-7318-C",
-  },
-  {
-    initial: "Z",
-    name: "Zyntrexil",
-    meta: "Not resolved · Unknown form",
-    salt: "No salt match in reference index",
-    confidence: "unverified",
-    score: "31.6%",
-    note: "No entry matched this name closely enough to report. Check the spelling on the strip, or confirm with a pharmacist.",
-    batchRef: "—",
-  },
-];
+const SAMPLE_STRIP = "Paracetamol\nAmoxicillin";
 
 export default function VerificationBench() {
   const [value, setValue] = useState("");
-  const [results, setResults] = useState<ResultEntry[] | null>(null);
+  const [result, setResult] = useState<VerifyResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function runCheck() {
-    if (!value.trim()) return;
-    setResults(SAMPLE_RESULTS);
+  async function runCheck() {
+    const names = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (names.length === 0) return;
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const data = await verifyDrugs(names);
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Verification failed.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function loadSample() {
     setValue(SAMPLE_STRIP);
-    setResults(SAMPLE_RESULTS);
   }
 
   return (
@@ -65,13 +52,13 @@ export default function VerificationBench() {
         <div className="mb-10 rounded-2xl border border-(--color-border) bg-(--color-surface-raised) p-6">
           <div className="mb-4 flex items-center gap-2 text-sm text-zinc-500">
             <Link2 className="h-4 w-4" />
-            One medicine per line — name and strength
+            One medicine per line
           </div>
 
           <textarea
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder={"Paracetamol 500\nAmoxicillin 250"}
+            placeholder={"Paracetamol\nAmoxicillin"}
             rows={4}
             spellCheck={false}
             className="mb-6 w-full resize-none rounded-xl border border-(--color-border) bg-black/40 p-4 font-mono text-base text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-(--color-accent)"
@@ -80,17 +67,19 @@ export default function VerificationBench() {
           <div className="flex flex-wrap items-center gap-4">
             <button
               onClick={runCheck}
-              className="inline-flex items-center gap-2 rounded-full bg-(--color-accent) px-6 py-3 font-medium text-black transition-colors hover:bg-(--color-accent-dim)"
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-full bg-(--color-accent) px-6 py-3 font-medium text-black transition-colors hover:bg-(--color-accent-dim) disabled:opacity-50"
             >
-              <Search className="h-4 w-4" />
-              Verify entries
-            </button>
-            <button className="inline-flex items-center gap-2 rounded-full border border-(--color-border) px-6 py-3 font-medium text-zinc-200 transition-colors hover:bg-black/40">
-              <Upload className="h-4 w-4" />
-              Upload a list
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              {loading ? "Verifying…" : "Verify entries"}
             </button>
             <button
               onClick={loadSample}
+              disabled={loading}
               className="font-mono text-sm text-zinc-500 transition-colors hover:text-zinc-300"
             >
               use sample strip
@@ -98,7 +87,26 @@ export default function VerificationBench() {
           </div>
         </div>
 
-        {results && <Results entries={results} />}
+        {loading && (
+          <div className="flex flex-col gap-6">
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="h-32 animate-pulse rounded-2xl border border-(--color-border) bg-(--color-surface-raised)"
+              />
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-5 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
+        {result && !loading && (
+          <Results drugs={result.drugs} interactions={result.interactions} />
+        )}
       </div>
     </section>
   );

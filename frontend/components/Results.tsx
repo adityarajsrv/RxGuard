@@ -1,24 +1,29 @@
 import ResultCard from "@/components/ResultCard";
+import type { DrugCardResult, InteractionResult } from "@/lib/api";
 
-export type Confidence = "high" | "medium" | "unverified";
-
-export interface ResultEntry {
-  initial: string;
-  name: string;
-  meta: string;
-  salt: string;
-  confidence: Confidence;
-  score: string;
-  note?: string;
-  batchRef: string;
-}
-
-export function Results({ entries }: { entries: ResultEntry[] }) {
+export function Results({
+  drugs,
+  interactions,
+}: {
+  drugs: DrugCardResult[];
+  interactions: InteractionResult[];
+}) {
   return (
     <div className="flex flex-col gap-6">
-      {entries.map((entry) => (
-        <ResultCard key={entry.name} {...entry} />
-      ))}
+      {drugs.map((drug) => {
+        const relevantInteractions = interactions.filter(
+          (i) =>
+            i.drug_a === drug.composition.drug_name_input ||
+            i.drug_b === drug.composition.drug_name_input
+        );
+        return (
+          <ResultCard
+            key={drug.composition.drug_name_input}
+            drug={drug}
+            interactions={relevantInteractions}
+          />
+        );
+      })}
     </div>
   );
 }

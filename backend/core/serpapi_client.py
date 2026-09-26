@@ -45,7 +45,6 @@ def _search(params: dict, max_retries: int = 2) -> dict:
             time.sleep(1.5 * (attempt + 1))
     raise RuntimeError(f"SerpApi failed after {max_retries} attempts: {last_err}")
 
-
 def search_drug_composition(drug_name: str) -> list[dict]:
     cache_payload = f"composition::{drug_name.strip().lower()}"
     cached = _cache_get("composition", cache_payload)
@@ -57,24 +56,26 @@ def search_drug_composition(drug_name: str) -> list[dict]:
     drug_slug = drug_lower.replace(" ", "-")
 
     for domain in TRUSTED_DOMAINS:
-        query = f"site:{domain} {drug_name} tablet composition"
-        data = _search({"q": query, "num": 5, "gl": "in", "hl": "en"})
-        organic = data.get("organic_results", [])
         best = None
-        for r in organic:
-            link = r.get("link", "")
-            link_domain = urlparse(link).netloc.replace("www.", "")
-            if domain not in link_domain:
-                continue
-
-            title = r.get("title", "").lower()
-            title_match = drug_lower in title
-            url_match = drug_slug in link.lower()
-
-            if title_match or url_match:
-                best = r
+        for query in (
+            f"site:{domain} {drug_name} tablet composition",
+            f"site:{domain} {drug_name}",
+        ):
+            data = _search({"q": query, "num": 5, "gl": "in", "hl": "en"})
+            print(f"--- {domain} | {query} | error={data.get('error')} | results={len(data.get('organic_results', []))}")
+            organic = data.get("organic_results", [])
+            for r in organic:
+                link = r.get("link", "")
+                link_domain = urlparse(link).netloc.replace("www.", "")
+                if domain not in link_domain:
+                    continue
+                title = r.get("title", "").lower()
+                if drug_lower in title or drug_slug in link.lower():
+                    best = r
+                    break
+            if best:
                 break
-
+            
         if best:
             results.append({
                 "source_name": domain,
