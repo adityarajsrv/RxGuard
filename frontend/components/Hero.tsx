@@ -16,9 +16,12 @@ export default function Hero() {
           </h1>
 
           <p className="mt-6 max-w-md text-lg leading-8 text-zinc-400">
-            RxGuard reads a medicine name and strength, checks it against
-            live pharmacology sources, and grades how sure it is —
-            including when it isn&apos;t.
+            RxGuard reads a medicine name and strength, checks it against live
+            pharmacology sources, and grades how sure it is — including when it
+            isn&apos;t.
+            <span className="mt-3 block font-medium text-zinc-100">
+              No guessing. No false positives.
+            </span>
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -41,7 +44,9 @@ export default function Hero() {
 
         <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-raised)/95 p-6 backdrop-blur">
           <div className="mb-5 flex items-center justify-between">
-            <span className="font-mono text-xs text-zinc-500">example output</span>
+            <span className="font-mono text-xs text-zinc-500">
+              example output
+            </span>
             <span className="h-2 w-2 rounded-full bg-(--color-accent)" />
           </div>
 
@@ -51,7 +56,9 @@ export default function Hero() {
             </div>
             <div>
               <p className="font-mono text-lg">Atorvastatin</p>
-              <p className="text-sm text-zinc-500">20 mg · film-coated tablet</p>
+              <p className="text-sm text-zinc-500">
+                20 mg · film-coated tablet
+              </p>
             </div>
           </div>
 

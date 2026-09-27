@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import Image from "next/image";
 
 export default function Header() {
   return (
     <header className="sticky top-0 z-50 px-4 pt-4">
       <div className="mx-auto flex max-w-6xl items-center justify-between rounded-full border border-(--color-border) bg-(--color-surface-raised)/90 px-6 py-3 backdrop-blur">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <ShieldCheck className="h-5 w-5 text-(--color-accent)" strokeWidth={2} />
+          <Image src='/logo.png' alt="RxGuard logo" width={36} height={28} />
           RxGuard
         </Link>
 

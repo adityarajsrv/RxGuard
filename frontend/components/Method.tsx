@@ -2,7 +2,7 @@ import { Pill, FlaskConical, ClipboardList, ShieldCheck, CircleHelp } from "luci
 
 export default function Method() {
   return (
-    <section id="method" className="px-4 py-36 mt-12">
+    <section id="method" className="px-4 py-36">
       <div className="mx-auto max-w-6xl">
         <h2 className="mb-12 text-4xl font-semibold tracking-tight sm:text-5xl">
           Three checks run on every entry.
@@ -13,7 +13,7 @@ export default function Method() {
             className="relative overflow-hidden rounded-2xl border border-(--color-border) bg-cover bg-center p-8"
             style={{
               backgroundImage:
-                "url('https://images.unsplash.com/photo-1587854692152-cbe660dbde88?q=80&w=1600&auto=format&fit=crop')",
+                "url('/medicine-strip.jpg')",
             }}
           >
             <div className="absolute inset-0 bg-black/70" />
