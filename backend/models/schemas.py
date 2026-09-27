@@ -24,6 +24,8 @@ class ResolvedComposition(BaseModel):
     strength_mg: dict[str, float] = Field(default_factory=dict)
     sources_checked: list[SourceExtraction] = Field(default_factory=list)
     disagreement_reason: Optional[str] = None
+    usage_context: Optional[str] = None
+    plain_summary: Optional[str] = None
 
 
 class EquivalentDrug(BaseModel):

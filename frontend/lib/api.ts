@@ -14,6 +14,8 @@ export interface ResolvedComposition {
   strength_mg: Record<string, number>;
   sources_checked: SourceExtraction[];
   disagreement_reason: string | null;
+  usage_context: string | null;
+  plain_summary: string | null;
 }
 
 export interface EquivalentDrug {
@@ -59,6 +61,44 @@ export async function verifyDrugs(drugNames: string[]): Promise<VerifyResponse> 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || `Verification failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function verifyImage(file: File): Promise<VerifyResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${API_BASE}/api/verify-image`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Image verification failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export interface AskResponse {
+  answer: string;
+  grounded: boolean;
+  verified: boolean | null;
+}
+
+export async function askAboutDrug(drugName: string, question: string, confidence: string): Promise<AskResponse> {
+  const res = await fetch(`${API_BASE}/api/ask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ drug_name: drugName, question, confidence }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || "Could not get an answer.");
   }
 
   return res.json();

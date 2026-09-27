@@ -1,9 +1,27 @@
-from core import serpapi_client, gemini_client
+from core import serpapi_client, gemini_client, openfda_client
 from core.confidence_engine import resolve_confidence
-from models.schemas import SourceExtraction, ResolvedComposition
-
+from core.drug_synonyms import canonical_name
+from models.schemas import SourceExtraction, ResolvedComposition, ConfidenceTier
 
 def resolve_drug_composition(drug_name: str) -> ResolvedComposition:
+    if openfda_client.is_recognized_generic(drug_name):
+        canonical = canonical_name(drug_name)
+        return ResolvedComposition(
+            drug_name_input=drug_name,
+            confidence=ConfidenceTier.HIGH,
+            active_ingredients=[canonical.capitalize()],
+            strength_mg={},
+            sources_checked=[
+                SourceExtraction(
+                    source_name="openFDA (recognized generic name)",
+                    source_url=None,
+                    active_ingredients=[canonical.capitalize()],
+                    strength_mg={},
+                    raw_text_snippet=f"'{drug_name}' matches a recognized generic ingredient name in FDA records.",
+                )
+            ],
+        )
+
     raw_sources = serpapi_client.search_drug_composition(drug_name)
 
     extractions: list[SourceExtraction] = []

@@ -103,3 +103,82 @@ def check_active_recall(generic_or_brand_name: str) -> dict | None:
         return out
     except Exception:
         return None    
+    
+def get_indications_text(generic_ingredient: str, max_retries: int = 2) -> str | None:
+    canonical = canonical_name(generic_ingredient)
+    cached = _cache_get(f"indications::{canonical}")
+    if cached is not None:
+        return cached.get("text")
+
+    query = f'openfda.generic_name:"{canonical}"'
+    params = {"search": query, "limit": 1}
+    url = f"{_BASE_URL}?{urllib.parse.urlencode(params)}"
+
+    last_err = None
+    for attempt in range(max_retries):
+        try:
+            with urllib.request.urlopen(url, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+            results = data.get("results", [])
+            if not results:
+                _cache_set(f"indications::{canonical}", {"text": None})
+                return None
+            indications = results[0].get("indications_and_usage", [])
+            text = " ".join(indications) if indications else None
+            _cache_set(f"indications::{canonical}", {"text": text})
+            return text
+        except Exception as e:
+            last_err = e
+            time.sleep(1.0 * (attempt + 1))
+
+    print(f"openFDA indications lookup failed for {canonical}: {last_err}")
+    return None
+
+def is_recognized_generic(name: str) -> bool:
+    canonical = canonical_name(name)
+    cached = _cache_get(f"generic_check::{canonical}")
+    if cached is not None:
+        return cached.get("is_generic", False)
+
+    query = f'openfda.generic_name:"{canonical}"'
+    params = {"search": query, "limit": 1}
+    url = f"{_BASE_URL}?{urllib.parse.urlencode(params)}"
+
+    try:
+        with urllib.request.urlopen(url, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+        is_generic = len(data.get("results", [])) > 0
+        _cache_set(f"generic_check::{canonical}", {"is_generic": is_generic})
+        return is_generic
+    except Exception:
+        return False
+    
+def get_warnings_text(generic_ingredient: str, max_retries: int = 2) -> str | None:
+    canonical = canonical_name(generic_ingredient)
+    cached = _cache_get(f"warnings::{canonical}")
+    if cached is not None:
+        return cached.get("text")
+
+    query = f'openfda.generic_name:"{canonical}"'
+    params = {"search": query, "limit": 1}
+    url = f"{_BASE_URL}?{urllib.parse.urlencode(params)}"
+
+    last_err = None
+    for attempt in range(max_retries):
+        try:
+            with urllib.request.urlopen(url, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+            results = data.get("results", [])
+            if not results:
+                _cache_set(f"warnings::{canonical}", {"text": None})
+                return None
+            warnings = results[0].get("warnings_and_cautions", []) or results[0].get("warnings", [])
+            text = " ".join(warnings) if warnings else None
+            _cache_set(f"warnings::{canonical}", {"text": text})
+            return text
+        except Exception as e:
+            last_err = e
+            time.sleep(1.0 * (attempt + 1))
+
+    print(f"openFDA warnings lookup failed for {canonical}: {last_err}")
+    return None

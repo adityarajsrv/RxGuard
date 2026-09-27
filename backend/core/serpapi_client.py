@@ -97,6 +97,7 @@ def search_shopping_equivalents(active_ingredient: str, strength_mg: dict) -> li
     ingredients_str = " ".join(ingredients_list)
     strength_str = " ".join(f"{v:g}mg" for v in strength_mg.values()) if strength_mg else ""
     query = f"{ingredients_str} {strength_str} tablet".strip()
+    query = " ".join(query.split()) 
 
     data = _search({
         "q": query,
@@ -106,8 +107,12 @@ def search_shopping_equivalents(active_ingredient: str, strength_mg: dict) -> li
         "hl": "en",
     })
     shopping_results = data.get("shopping_results", [])
+
     out = []
     for r in shopping_results:
+        title = (r.get("title") or "").lower()
+        if not any(ing.lower() in title for ing in ingredients_list):
+            continue
         out.append({
             "brand_name": r.get("title"),
             "price_inr": r.get("extracted_price"),

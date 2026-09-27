@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Link2, Search, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Link2, Search, Loader2, Upload } from "lucide-react";
 import { Results } from "@/components/Results";
-import { verifyDrugs, type VerifyResponse } from "@/lib/api";
+import { verifyDrugs, verifyImage, type VerifyResponse } from "@/lib/api";
 
 const SAMPLE_STRIP = "Paracetamol\nAmoxicillin";
 
@@ -12,13 +12,10 @@ export default function VerificationBench() {
   const [result, setResult] = useState<VerifyResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function runCheck() {
-    const names = value
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-
+    const names = value.split("\n").map((l) => l.trim()).filter(Boolean);
     if (names.length === 0) return;
 
     setLoading(true);
@@ -32,6 +29,29 @@ export default function VerificationBench() {
       setError(err instanceof Error ? err.message : "Verification failed.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  function triggerFilePicker() {
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const data = await verifyImage(file);
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not read the image.");
+    } finally {
+      setLoading(false);
+      e.target.value = "";
     }
   }
 
@@ -52,7 +72,7 @@ export default function VerificationBench() {
         <div className="mb-10 rounded-2xl border border-(--color-border) bg-(--color-surface-raised) p-6">
           <div className="mb-4 flex items-center gap-2 text-sm text-zinc-500">
             <Link2 className="h-4 w-4" />
-            One medicine per line
+            One medicine per line — or upload a photo of the strip
           </div>
 
           <textarea
@@ -64,23 +84,37 @@ export default function VerificationBench() {
             className="mb-6 w-full resize-none rounded-xl border border-(--color-border) bg-black/40 p-4 font-mono text-base text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-(--color-accent)"
           />
 
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+
           <div className="flex flex-wrap items-center gap-4">
             <button
               onClick={runCheck}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-full bg-(--color-accent) px-6 py-3 font-medium text-black transition-colors hover:bg-(--color-accent-dim) disabled:opacity-50"
+              className="cursor-pointer inline-flex items-center gap-2 rounded-full bg-(--color-accent) px-6 py-3 font-medium text-black transition-colors hover:bg-(--color-accent-dim) disabled:opacity-50"
             >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               {loading ? "Verifying…" : "Verify entries"}
             </button>
+
+            <button
+              onClick={triggerFilePicker}
+              disabled={loading}
+              className="cursor-pointer inline-flex items-center gap-2 rounded-full border border-(--color-border) px-6 py-3 font-medium text-zinc-200 transition-colors hover:bg-black/40 disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4" />
+              Upload a photo
+            </button>
+
             <button
               onClick={loadSample}
               disabled={loading}
-              className="font-mono text-sm text-zinc-500 transition-colors hover:text-zinc-300"
+              className="cursor-pointer font-mono text-sm text-zinc-500 transition-colors hover:text-zinc-300"
             >
               use sample strip
             </button>
@@ -90,10 +124,7 @@ export default function VerificationBench() {
         {loading && (
           <div className="flex flex-col gap-6">
             {[0, 1].map((i) => (
-              <div
-                key={i}
-                className="h-32 animate-pulse rounded-2xl border border-(--color-border) bg-(--color-surface-raised)"
-              />
+              <div key={i} className="h-32 animate-pulse rounded-2xl border border-(--color-border) bg-(--color-surface-raised)" />
             ))}
           </div>
         )}

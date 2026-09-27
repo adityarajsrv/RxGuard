@@ -8,7 +8,7 @@ export default function Hero() {
         <div>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-(--color-border) bg-black/40 px-3 py-1.5 text-sm text-(--color-accent) backdrop-blur">
             <ShieldCheck className="h-4 w-4" />
-            Reference index · 12,480 entries
+            Live-verified against SerpApi + openFDA
           </div>
 
           <h1 className="max-w-lg text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
@@ -16,22 +16,22 @@ export default function Hero() {
           </h1>
 
           <p className="mt-6 max-w-md text-lg leading-8 text-zinc-400">
-            RxGuard reads a medicine name and strength, matches it against a
-            pharmacology reference index, and grades how sure it is —
+            RxGuard reads a medicine name and strength, checks it against
+            live pharmacology sources, and grades how sure it is —
             including when it isn&apos;t.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/verify"
-              className="inline-flex items-center gap-2 rounded-full bg-(--color-accent) px-6 py-3 font-medium text-black transition-colors hover:bg-(--color-accent-dim)"
+              className="inline-flex items-center gap-2 rounded-full bg-(--color-accent) px-6 py-3 font-medium text-black transition-colors duration-200 ease-out hover:bg-(--color-accent-dim)"
             >
               <Search className="h-4 w-4" />
               Verify a medicine
             </Link>
             <Link
               href="#method"
-              className="inline-flex items-center gap-2 rounded-full border border-(--color-border) bg-black/30 px-6 py-3 font-medium text-zinc-200 backdrop-blur transition-colors hover:bg-(--color-surface-raised)"
+              className="inline-flex items-center gap-2 rounded-full border border-(--color-border) bg-black/30 px-6 py-3 font-medium text-zinc-200 backdrop-blur transition-colors duration-200 ease-out hover:bg-(--color-surface-raised)"
             >
               <ClipboardList className="h-4 w-4" />
               How grading works
@@ -41,7 +41,7 @@ export default function Hero() {
 
         <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-raised)/95 p-6 backdrop-blur">
           <div className="mb-5 flex items-center justify-between">
-            <span className="font-mono text-xs text-zinc-500">live check</span>
+            <span className="font-mono text-xs text-zinc-500">example output</span>
             <span className="h-2 w-2 rounded-full bg-(--color-accent)" />
           </div>
 
@@ -57,7 +57,7 @@ export default function Hero() {
 
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-800 bg-emerald-950/40 px-3 py-1.5 text-sm text-emerald-400">
             <ShieldCheck className="h-4 w-4" />
-            High confidence <span className="font-mono">94.1%</span>
+            High confidence
           </div>
 
           <dl className="divide-y divide-(--color-border) border-t border-(--color-border)">
@@ -67,11 +67,11 @@ export default function Hero() {
             </div>
             <div className="flex items-center justify-between py-3">
               <dt className="text-sm text-zinc-500">Equivalents</dt>
-              <dd className="font-mono text-sm">3 found</dd>
+              <dd className="font-mono text-sm">found live</dd>
             </div>
             <div className="flex items-center justify-between py-3">
-              <dt className="text-sm text-zinc-500">Interactions flagged</dt>
-              <dd className="font-mono text-sm">1 major</dd>
+              <dt className="text-sm text-zinc-500">Interactions</dt>
+              <dd className="font-mono text-sm">checked live</dd>
             </div>
           </dl>
         </div>

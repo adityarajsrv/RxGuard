@@ -82,3 +82,72 @@ to judge severity). Return ONLY this JSON:
         return data
     except Exception:
         return {"plain_description": raw_excerpt, "severity": "unspecified"}
+    
+def summarize_usage_context(raw_text: str, drug_name: str) -> str:
+    if not GEMINI_API_KEY:
+        return raw_text[:300]
+
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-3.1-flash-lite")
+
+    prompt = f"""This raw text is from an FDA drug label describing what {drug_name} \
+is used for:
+
+"{raw_text}"
+
+Write ONE or TWO plain-language sentences a non-medical person could understand, \
+explaining what condition(s) this medicine is typically prescribed for. Do not add \
+any dosing instructions or advice — only describe the general purpose. Return ONLY \
+the sentence(s), no JSON, no preamble."""
+
+    try:
+        response = model.generate_content(prompt, generation_config={"temperature": 0})
+        return response.text.strip()
+    except Exception:
+        return raw_text[:300]
+    
+def generate_plain_summary(drug_name: str, ingredients: list[str], usage_text: str | None, confidence: str) -> str:
+    if not GEMINI_API_KEY:
+        return ""
+
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-3.1-flash-lite")
+
+    usage_part = usage_text if usage_text else "no official usage information was found"
+
+    prompt = f"""Write ONE short, warm, plain-English paragraph (2-3 sentences max) for a \
+person with no medical background, explaining medicine "{drug_name}" which contains \
+{', '.join(ingredients) if ingredients else 'unconfirmed ingredients'}.
+
+Usage information found: {usage_part}
+Confidence level of this data: {confidence}
+
+Do not give dosing instructions. Do not sound clinical or robotic — sound like a knowledgeable \
+friend explaining it simply. If confidence is low, say so gently and suggest asking a pharmacist."""
+
+    try:
+        response = model.generate_content(prompt, generation_config={"temperature": 0.3})
+        return response.text.strip()
+    except Exception:
+        return ""
+    
+def extract_drug_names_from_image(image_bytes: bytes, mime_type: str) -> list[str]:
+    if not GEMINI_API_KEY:
+        return []
+
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-3.1-flash-lite")
+
+    prompt = """Look at this photo of medicine packaging or a prescription. List every \
+distinct medicine name you can read, one per line, no other text. If you cannot read \
+any medicine name clearly, return nothing."""
+
+    try:
+        response = model.generate_content([
+            {"mime_type": mime_type, "data": image_bytes},
+            prompt,
+        ])
+        lines = [l.strip() for l in response.text.strip().split("\n") if l.strip()]
+        return lines[:10]
+    except Exception:
+        return []

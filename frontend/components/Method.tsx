@@ -31,7 +31,7 @@ export default function Method() {
               <div className="flex flex-wrap gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-emerald-800 bg-emerald-950/50 px-3 py-1.5 text-sm text-emerald-400">
                   <ShieldCheck className="h-4 w-4" />
-                  High confidence <span className="font-mono">96.7%</span>
+                  High confidence
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-(--color-border) bg-black/40 px-3 py-1.5 text-sm text-zinc-300">
                   <CircleHelp className="h-4 w-4" />
@@ -55,7 +55,7 @@ export default function Method() {
               <ClipboardList className="mb-5 h-6 w-6 text-(--color-accent)" />
               <h3 className="mb-2 text-xl font-semibold">Interaction screen</h3>
               <p className="mb-3 font-mono text-sm text-zinc-500">
-                1,842 pair rules
+                Live FDA label lookup + curated fallback
               </p>
               <p className="text-zinc-400">
                 Severity and the clinical reason, never just a warning
