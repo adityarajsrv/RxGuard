@@ -50,6 +50,28 @@ def test_no_known_interaction_is_distinct(mock_get_text):
     assert results[0].verdict == InteractionVerdict.NO_KNOWN_INTERACTION
     print("PASS: no-interaction distinct from cannot-verify (mocked empty openFDA + empty CSV match)")
 
+@patch("core.interaction_checker.summarize_fda_interaction")
+@patch("core.interaction_checker.get_interaction_text")
+def test_curated_hit_not_hidden_by_silent_fda_label(mock_text, mock_summary):
+    mock_text.return_value = "This label says nothing relevant."
+    comps = [
+        ResolvedComposition(drug_name_input="Warfarin", confidence=ConfidenceTier.HIGH, active_ingredients=["Warfarin"]),
+        ResolvedComposition(drug_name_input="Crocin", confidence=ConfidenceTier.HIGH, active_ingredients=["Caffeine", "Paracetamol"]),
+    ]
+    result = check_all_pairs(comps)[0]
+    assert result.verdict == InteractionVerdict.KNOWN_INTERACTION
+    assert result.source == "curated dataset"
+    print("PASS: curated hit survives a silent FDA label")
+
+
+def test_duplicate_ingredient_flagged():
+    comps = [
+        ResolvedComposition(drug_name_input="Crocin", confidence=ConfidenceTier.HIGH, active_ingredients=["Caffeine", "Paracetamol"]),
+        ResolvedComposition(drug_name_input="Combiflam", confidence=ConfidenceTier.HIGH, active_ingredients=["Ibuprofen", "Paracetamol"]),
+    ]
+    result = check_all_pairs(comps)[0]
+    assert result.verdict == InteractionVerdict.DUPLICATE_INGREDIENT
+    print("PASS: shared paracetamol flagged")
 
 if __name__ == "__main__":
     test_known_interaction_detected()

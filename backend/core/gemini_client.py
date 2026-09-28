@@ -34,6 +34,7 @@ def extract_composition_from_snippet(source_name: str, title: str, snippet: str)
             generation_config={"temperature": 0, "response_mime_type": "application/json"},
         )
         data = json.loads(response.text.strip())
+        print(f"GEMINI EXTRACT for snippet={snippet[:80]!r} -> {data}")
 
         if not isinstance(data.get("active_ingredients"), list):
             return {"active_ingredients": [], "strength_mg": {}}
@@ -151,3 +152,32 @@ any medicine name clearly, return nothing."""
         return lines[:10]
     except Exception:
         return []
+    
+def extract_composition_from_image(image_bytes: bytes, mime_type: str) -> dict:
+    """Returns {drug_name, active_ingredients, strength_mg} for each medicine
+    visible on the packaging, or an empty result if nothing is legible."""
+    if not GEMINI_API_KEY:
+        return {"medicines": []}
+
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-3.1-flash-lite")
+
+    prompt = """Look at this photo of medicine packaging. For each distinct medicine you
+can read, extract: the printed name, active ingredient(s), and strength(s) in mg, exactly
+as printed. If a strength or ingredient is not clearly legible, omit it rather than guessing.
+
+Return ONLY this JSON, no markdown fences:
+{"medicines": [{"drug_name": "...", "active_ingredients": ["..."], "strength_mg": {"...": number}}]}"""
+
+    try:
+        response = model.generate_content(
+            [{"mime_type": mime_type, "data": image_bytes}, prompt],
+            generation_config={"temperature": 0, "response_mime_type": "application/json"},
+        )
+        data = json.loads(response.text.strip())
+        if not isinstance(data.get("medicines"), list):
+            return {"medicines": []}
+        return data
+    except Exception as e:
+        print(f"IMAGE COMPOSITION EXTRACTION FAILED: {e}")
+        return {"medicines": []}

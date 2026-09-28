@@ -26,6 +26,10 @@ class ResolvedComposition(BaseModel):
     disagreement_reason: Optional[str] = None
     usage_context: Optional[str] = None
     plain_summary: Optional[str] = None
+    entered_strength_mg: Optional[float] = None
+    verification_basis: str = "web_sources"
+    prescription_only: Optional[bool] = None
+    equivalents_note: Optional[str] = None
 
 
 class EquivalentDrug(BaseModel):
@@ -33,10 +37,13 @@ class EquivalentDrug(BaseModel):
     price_inr: Optional[float] = None
     seller: Optional[str] = None
     source_url: Optional[str] = None
+    pack_size: Optional[int] = None
+    price_per_unit: Optional[float] = None
 
 
 class InteractionVerdict(str, Enum):
     KNOWN_INTERACTION = "known_interaction"
+    DUPLICATE_INGREDIENT = "duplicate_ingredient"
     NO_KNOWN_INTERACTION = "no_known_interaction"
     CANNOT_VERIFY = "cannot_verify"
 
@@ -57,6 +64,12 @@ class DrugCardResult(BaseModel):
 
 class VerifyRequest(BaseModel):
     drug_names: list[str] = Field(..., min_length=1, max_length=10)
+
+
+class AskRequest(BaseModel):
+    drug_name: str = Field(..., min_length=1, max_length=80)
+    question: str = Field(..., min_length=1, max_length=300)
+    confidence: Optional[str] = None
 
 
 class VerifyResponse(BaseModel):

@@ -30,6 +30,13 @@ const confidenceStyles = {
   },
 } as const;
 
+const VERDICT_LABEL: Record<string, string> = {
+  known_interaction: "Interaction found",
+  duplicate_ingredient: "Same ingredient in both",
+  no_known_interaction: "Nothing found",
+  cannot_verify: "Cannot verify",
+};
+
 function formatStrength(strengthMg: Record<string, number>): string {
   const entries = Object.entries(strengthMg);
   if (entries.length === 0) return "";
@@ -58,16 +65,25 @@ export default function ResultCard({
   const [asking, setAsking] = useState(false);
 
   const { composition, equivalents } = drug;
-  const { icon: Icon, classes, label } = confidenceStyles[composition.confidence];
+  const {
+    icon: Icon,
+    classes,
+    label,
+  } = confidenceStyles[composition.confidence];
   const initial = composition.drug_name_input.charAt(0).toUpperCase();
-  const strengthLabel = formatStrength(composition.strength_mg);
+  const strengthLabel =
+    formatStrength(composition.strength_mg) ||
+    (composition.entered_strength_mg != null
+      ? `${composition.entered_strength_mg} mg (as entered)`
+      : "");
   const saltLabel =
     composition.active_ingredients.length > 0
       ? composition.active_ingredients.join(", ")
       : "No ingredients confirmed";
-  const sourcesLabel = `${composition.sources_checked.length} source${
-    composition.sources_checked.length === 1 ? "" : "s"
-  } checked`;
+  const sourcesLabel =
+    composition.verification_basis === "fda_generic_name"
+      ? "name matched to FDA drug labels"
+      : `${composition.sources_checked.length} source${composition.sources_checked.length === 1 ? "" : "s"} checked`;
 
   async function handleAsk() {
     if (!question.trim()) return;
@@ -75,7 +91,11 @@ export default function ResultCard({
     setAnswer(null);
     setVerified(null);
     try {
-      const res = await askAboutDrug(composition.drug_name_input, question, composition.confidence);
+      const res = await askAboutDrug(
+        composition.drug_name_input,
+        question,
+        composition.confidence,
+      );
       setAnswer(res.answer);
       setVerified(res.verified ?? null);
     } catch {
@@ -101,7 +121,9 @@ export default function ResultCard({
           </div>
         </div>
 
-        <span className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${classes}`}>
+        <span
+          className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${classes}`}
+        >
           <Icon className="h-4 w-4" />
           {label}
         </span>
@@ -122,7 +144,8 @@ export default function ResultCard({
 
       <div className="flex items-center justify-between border-t border-(--color-border) pt-4">
         <span className="font-mono text-xs text-zinc-500">
-          {composition.sources_checked.map((s) => s.source_name).join(" · ") || "no sources"}
+          {composition.sources_checked.map((s) => s.source_name).join(" · ") ||
+            "no sources"}
         </span>
 
         <button
@@ -163,9 +186,7 @@ export default function ResultCard({
               <div>
                 {equivalents.length === 0 ? (
                   <p className="text-sm text-zinc-500">
-                    {composition.confidence === "high"
-                      ? "No equivalents found."
-                      : "Equivalents unavailable at this confidence level."}
+                    {composition.equivalents_note ?? "No equivalents found."}
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2">
@@ -175,11 +196,14 @@ export default function ResultCard({
                         href={eq.source_url || undefined}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between rounded-lg border border-(--color-border) px-4 py-2.5 text-sm transition-colors duration-150 ease-out hover:bg-black/30"
+                        className="flex items-center justify-between gap-4 rounded-lg border border-(--color-border) px-4 py-2.5 text-sm transition-colors duration-150 ease-out hover:bg-black/30"
                       >
                         <span>{eq.brand_name}</span>
-                        <span className="font-mono text-zinc-400">
+                        <span className="shrink-0 text-right font-mono text-zinc-400">
                           {eq.price_inr != null ? `₹${eq.price_inr}` : "—"}
+                          {eq.price_per_unit != null
+                            ? ` · ₹${eq.price_per_unit}/unit`
+                            : ""}
                           {eq.seller ? ` · ${eq.seller}` : ""}
                         </span>
                       </a>
@@ -192,23 +216,39 @@ export default function ResultCard({
             {activeTab === "interactions" && (
               <div>
                 {interactions.length === 0 ? (
-                  <p className="text-sm text-zinc-500">No other drugs to check against.</p>
+                  <p className="text-sm text-zinc-500">
+                    No other drugs to check against.
+                  </p>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {interactions.map((i, idx) => (
-                      <div key={idx} className="rounded-lg border border-(--color-border) px-4 py-3 text-sm">
+                      <div
+                        key={idx}
+                        className="rounded-lg border border-(--color-border) px-4 py-3 text-sm"
+                      >
                         <div className="mb-1 flex items-center justify-between gap-3">
-                          <span className="font-mono text-zinc-300">{i.drug_a} + {i.drug_b}</span>
-                          <span className={
-                            i.verdict === "known_interaction" ? "text-amber-400"
-                            : i.verdict === "cannot_verify" ? "text-zinc-500"
-                            : "text-emerald-400"
-                          }>
-                            {i.verdict.replace(/_/g, " ")}
+                          <span className="font-mono text-zinc-300">
+                            {i.drug_a} + {i.drug_b}
+                          </span>
+                          <span
+                            className={
+                              i.verdict === "known_interaction" ||
+                              i.verdict === "duplicate_ingredient"
+                                ? "text-amber-400"
+                                : "text-zinc-500"
+                            }
+                          >
+                            {VERDICT_LABEL[i.verdict] ?? i.verdict}
                           </span>
                         </div>
-                        {i.description && <p className="text-zinc-500">{i.description}</p>}
-                        {i.source && <p className="mt-1 font-mono text-xs text-zinc-600">source: {i.source}</p>}
+                        {i.description && (
+                          <p className="text-zinc-500">{i.description}</p>
+                        )}
+                        {i.source && (
+                          <p className="mt-1 font-mono text-xs text-zinc-600">
+                            source: {i.source}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -231,7 +271,11 @@ export default function ResultCard({
                     disabled={asking || !question.trim()}
                     className="flex items-center justify-center rounded-lg bg-(--color-accent) px-3 text-black transition-colors duration-150 ease-out disabled:opacity-50"
                   >
-                    {asking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {asking ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
 
@@ -240,12 +284,14 @@ export default function ResultCard({
                     <p>{answer}</p>
                     {verified === true && (
                       <p className="mt-2 flex items-center gap-1 text-xs text-emerald-400">
-                        <ShieldCheck className="h-3 w-3" /> Checked against source — no unsupported claims found
+                        <ShieldCheck className="h-3 w-3" /> Checked against
+                        source — no unsupported claims found
                       </p>
                     )}
                     {verified === false && (
                       <p className="mt-2 flex items-center gap-1 text-xs text-amber-400">
-                        <TriangleAlert className="h-3 w-3" /> Could not fully confirm this against the source — verify independently
+                        <TriangleAlert className="h-3 w-3" /> Could not fully
+                        confirm this against the source — verify independently
                       </p>
                     )}
                   </div>
@@ -253,7 +299,8 @@ export default function ResultCard({
 
                 {!answer && !asking && (
                   <p className="text-xs text-zinc-600">
-                    Answers are grounded in the FDA label only — it will say so if it can&apos;t find a reliable answer.
+                    Answers are grounded in the FDA label only — it will say so
+                    if it can&apos;t find a reliable answer.
                   </p>
                 )}
               </div>

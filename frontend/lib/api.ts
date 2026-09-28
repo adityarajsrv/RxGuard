@@ -16,6 +16,10 @@ export interface ResolvedComposition {
   disagreement_reason: string | null;
   usage_context: string | null;
   plain_summary: string | null;
+  entered_strength_mg: number | null;
+  verification_basis: string;
+  prescription_only: boolean | null;
+  equivalents_note: string | null;
 }
 
 export interface EquivalentDrug {
@@ -23,10 +27,13 @@ export interface EquivalentDrug {
   price_inr: number | null;
   seller: string | null;
   source_url: string | null;
+  pack_size: number | null;
+  price_per_unit: number | null;
 }
 
 export type InteractionVerdict =
   | "known_interaction"
+  | "duplicate_ingredient"
   | "no_known_interaction"
   | "cannot_verify";
 

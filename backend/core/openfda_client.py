@@ -1,19 +1,10 @@
-"""
-Queries openFDA's structured drug label data for the official
-"Drug Interactions" section text of a given generic ingredient.
-Free, no key required at hackathon scale, directly sourced from
-FDA-regulated drug labeling — this is the authoritative data source
-backing the interaction checker, with the curated CSV as fallback
-for ingredients openFDA doesn't cover.
-
-Docs: https://open.fda.gov/apis/drug/label/
-"""
 import os
 import json
 import time
 import hashlib
-import urllib.request
+import urllib.error
 import urllib.parse
+import urllib.request
 
 from core.drug_synonyms import canonical_name
 
@@ -22,163 +13,153 @@ os.makedirs(_CACHE_DIR, exist_ok=True)
 
 _BASE_URL = "https://api.fda.gov/drug/label.json"
 
+_FIELD_LIMITS = {
+    "indications_and_usage": 12000,
+    "drug_interactions": 40000,
+    "warnings_and_cautions": 12000,
+    "warnings": 12000,
+    "boxed_warning": 12000,
+}
 
-def _cache_key(payload: str) -> str:
-    h = hashlib.sha256(payload.encode()).hexdigest()[:16]
-    return os.path.join(_CACHE_DIR, f"openfda_{h}.json")
+_SALT_TOKENS = {
+    "sodium", "potassium", "calcium", "magnesium", "hydrochloride", "hcl",
+    "sulfate", "sulphate", "maleate", "tartrate", "succinate", "besylate",
+    "mesylate", "acetate", "phosphate", "citrate", "trihydrate", "dihydrate",
+    "monohydrate", "hydrobromide", "disodium",
+}
 
 
-def _cache_get(payload: str):
-    path = _cache_key(payload)
+def _cache_path(key: str) -> str:
+    return os.path.join(_CACHE_DIR, f"openfda_{hashlib.sha256(key.encode()).hexdigest()[:16]}.json")
+
+
+def _cache_get(key: str):
+    path = _cache_path(key)
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return None
 
 
-def _cache_set(payload: str, data):
-    with open(_cache_key(payload), "w", encoding="utf-8") as f:
+def _cache_set(key: str, data):
+    with open(_cache_path(key), "w", encoding="utf-8") as f:
         json.dump(data, f)
 
 
-def get_interaction_text(generic_ingredient: str, max_retries: int = 2) -> str | None:
-    """
-    Returns the raw 'drug_interactions' label text for this generic
-    ingredient, or None if openFDA has no matching label. None is a
-    valid, honest outcome — it means "not found," not "no interactions."
-    """
-    canonical = canonical_name(generic_ingredient)
-    cached = _cache_get(f"interaction_text::{canonical}")
-    if cached is not None:
-        return cached.get("text")
+def _trim(label: dict) -> dict:
+    openfda = label.get("openfda", {})
+    out = {
+        "generic_names": [g.lower() for g in openfda.get("generic_name", [])],
+        "product_types": openfda.get("product_type", []),
+    }
+    for field, limit in _FIELD_LIMITS.items():
+        value = label.get(field)
+        if value:
+            out[field] = " ".join(value)[:limit]
+    return out
 
-    query = f'openfda.generic_name:"{canonical}"'
-    params = {"search": query, "limit": 1}
-    url = f"{_BASE_URL}?{urllib.parse.urlencode(params)}"
 
+def _request(query: str, limit: int = 8, retries: int = 2):
+    """Returns a list of trimmed labels, [] for no match, None for a network failure."""
+    url = f"{_BASE_URL}?{urllib.parse.urlencode({'search': query, 'limit': limit})}"
     last_err = None
-    for attempt in range(max_retries):
+    for attempt in range(retries):
         try:
-            with urllib.request.urlopen(url, timeout=8) as resp:
+            with urllib.request.urlopen(url, timeout=15) as resp:
                 data = json.loads(resp.read().decode())
-            results = data.get("results", [])
-            if not results:
-                _cache_set(f"interaction_text::{canonical}", {"text": None})
-                return None
-            interactions = results[0].get("drug_interactions", [])
-            text = " ".join(interactions) if interactions else None
-            _cache_set(f"interaction_text::{canonical}", {"text": text})
-            return text
-        except Exception as e:
+            return [_trim(l) for l in data.get("results", [])]
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return []
             last_err = e
-            time.sleep(1.0 * (attempt + 1))
-
-    print(f"openFDA lookup failed for {canonical}: {last_err}")
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+        time.sleep(1.0 * (attempt + 1))
+    print(f"openFDA request failed: {last_err}")
     return None
 
-def check_active_recall(generic_or_brand_name: str) -> dict | None:
-    canonical = canonical_name(generic_or_brand_name)
-    cached = _cache_get(f"recall::{canonical}")
+
+def _labels_for(canonical: str):
+    key = f"labels_v2::{canonical}"
+    cached = _cache_get(key)
     if cached is not None:
-        return cached
+        return cached["labels"]
 
-    query = f'openfda.generic_name:"{canonical}"+AND+status:"Ongoing"'
-    params = {"search": query, "limit": 3}
-    url = f"https://api.fda.gov/drug/enforcement.json?{urllib.parse.urlencode(params)}"
+    labels = []
+    for query in (
+        f'openfda.generic_name.exact:"{canonical.upper()}"',
+        f'openfda.generic_name:"{canonical}"',
+    ):
+        result = _request(query)
+        if result is None:
+            return None
+        if result:
+            labels = result
+            break
 
-    try:
-        with urllib.request.urlopen(url, timeout=8) as resp:
-            data = json.loads(resp.read().decode())
-        results = data.get("results", [])
-        if not results:
-            out = {"has_active_recall": False}
-        else:
-            r = results[0]
-            out = {
-                "has_active_recall": True,
-                "reason": r.get("reason_for_recall"),
-                "classification": r.get("classification"),
-            }
-        _cache_set(f"recall::{canonical}", out)
-        return out
-    except Exception:
-        return None    
-    
-def get_indications_text(generic_ingredient: str, max_retries: int = 2) -> str | None:
-    canonical = canonical_name(generic_ingredient)
-    cached = _cache_get(f"indications::{canonical}")
-    if cached is not None:
-        return cached.get("text")
+    _cache_set(key, {"labels": labels})
+    return labels
 
-    query = f'openfda.generic_name:"{canonical}"'
-    params = {"search": query, "limit": 1}
-    url = f"{_BASE_URL}?{urllib.parse.urlencode(params)}"
 
-    last_err = None
-    for attempt in range(max_retries):
-        try:
-            with urllib.request.urlopen(url, timeout=8) as resp:
-                data = json.loads(resp.read().decode())
-            results = data.get("results", [])
-            if not results:
-                _cache_set(f"indications::{canonical}", {"text": None})
-                return None
-            indications = results[0].get("indications_and_usage", [])
-            text = " ".join(indications) if indications else None
-            _cache_set(f"indications::{canonical}", {"text": text})
-            return text
-        except Exception as e:
-            last_err = e
-            time.sleep(1.0 * (attempt + 1))
+def _base_name(generic_name: str) -> str:
+    tokens = generic_name.lower().replace(",", " ").split()
+    while len(tokens) > 1 and tokens[-1] in _SALT_TOKENS:
+        tokens.pop()
+    return " ".join(tokens)
 
-    print(f"openFDA indications lookup failed for {canonical}: {last_err}")
-    return None
+
+def _is_single_ingredient(label: dict, canonical: str) -> bool:
+    names = label.get("generic_names", [])
+    return bool(names) and all(_base_name(n) == canonical for n in names)
+
+
+def _single_ingredient_labels(canonical: str):
+    labels = _labels_for(canonical)
+    if not labels:
+        return []
+    return [l for l in labels if _is_single_ingredient(l, canonical)]
+
+
+def _section(ingredient: str, field: str) -> str | None:
+    canonical = canonical_name(ingredient)
+    pool = [l for l in _single_ingredient_labels(canonical) if l.get(field)]
+    if not pool:
+        return None
+    return max(pool, key=lambda l: len(l[field]))[field]
+
 
 def is_recognized_generic(name: str) -> bool:
     canonical = canonical_name(name)
-    cached = _cache_get(f"generic_check::{canonical}")
-    if cached is not None:
-        return cached.get("is_generic", False)
-
-    query = f'openfda.generic_name:"{canonical}"'
-    params = {"search": query, "limit": 1}
-    url = f"{_BASE_URL}?{urllib.parse.urlencode(params)}"
-
-    try:
-        with urllib.request.urlopen(url, timeout=8) as resp:
-            data = json.loads(resp.read().decode())
-        is_generic = len(data.get("results", [])) > 0
-        _cache_set(f"generic_check::{canonical}", {"is_generic": is_generic})
-        return is_generic
-    except Exception:
+    if len(canonical) < 3 or canonical in _SALT_TOKENS:
         return False
-    
-def get_warnings_text(generic_ingredient: str, max_retries: int = 2) -> str | None:
-    canonical = canonical_name(generic_ingredient)
-    cached = _cache_get(f"warnings::{canonical}")
-    if cached is not None:
-        return cached.get("text")
+    return len(_single_ingredient_labels(canonical)) > 0
 
-    query = f'openfda.generic_name:"{canonical}"'
-    params = {"search": query, "limit": 1}
-    url = f"{_BASE_URL}?{urllib.parse.urlencode(params)}"
 
-    last_err = None
-    for attempt in range(max_retries):
-        try:
-            with urllib.request.urlopen(url, timeout=8) as resp:
-                data = json.loads(resp.read().decode())
-            results = data.get("results", [])
-            if not results:
-                _cache_set(f"warnings::{canonical}", {"text": None})
-                return None
-            warnings = results[0].get("warnings_and_cautions", []) or results[0].get("warnings", [])
-            text = " ".join(warnings) if warnings else None
-            _cache_set(f"warnings::{canonical}", {"text": text})
-            return text
-        except Exception as e:
-            last_err = e
-            time.sleep(1.0 * (attempt + 1))
+def is_prescription_only(ingredient: str) -> bool | None:
+    """Proxy based on FDA labelling: True only if every sampled single-ingredient
+    label is prescription. None when unknown."""
+    canonical = canonical_name(ingredient)
+    types = []
+    for label in _single_ingredient_labels(canonical):
+        types.extend(t.upper() for t in label.get("product_types", []))
+    if not types:
+        return None
+    has_rx = any("PRESCRIPTION" in t for t in types)
+    has_otc = any("OTC" in t for t in types)
+    return has_rx and not has_otc
 
-    print(f"openFDA warnings lookup failed for {canonical}: {last_err}")
-    return None
+
+def get_indications_text(ingredient: str) -> str | None:
+    return _section(ingredient, "indications_and_usage")
+
+
+def get_interaction_text(ingredient: str) -> str | None:
+    return _section(ingredient, "drug_interactions")
+
+
+def get_warnings_text(ingredient: str) -> str | None:
+    return _section(ingredient, "warnings_and_cautions") or _section(ingredient, "warnings")
+
+
+def get_boxed_warning_text(ingredient: str) -> str | None:
+    return _section(ingredient, "boxed_warning")
